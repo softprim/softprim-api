@@ -1,29 +1,34 @@
-# YouTube MP3 Download API – Documentation
+# SoftPrim YouTube Conversion API – Official Documentation
 
 ## Overview
-This API allows clients to download the audio track (in **MP3 format**) of any public YouTube video by providing a valid YouTube link.  
-All requests require a valid **API key** sent via header authentication.
+The **SoftPrim YouTube Conversion API** provides a fast, scalable, and reliable solution for converting YouTube videos into audio files through an asynchronous processing system.  
+It is designed for developers who need high‑performance media extraction for web platforms, mobile apps, bots, and automation services.
 
-API keys can be purchased by contacting: **request@softprim.ro**
+Our system uses a **job‑queue architecture**, ensuring stable, non‑blocking conversions even under high load.
+
+All requests **require a valid API key**, sent through HTTP headers.
+
+For commercial access, API keys can be purchased by contacting:  
+📧 **request@softprim.ro**
 
 ---
 
 ## Base URL
 ```
-https://vps.softprim.ro/ytconvert
+https://vps.softprim.ro/
 ```
 
 ---
 
-## Authentication
+# Authentication
 
-All API requests **must** include the following HTTP header:
+Every request to the API must include the following HTTP header:
 
 ```
-X-API-KEY: your_api_key_here
+X-API-KEY: YOUR_API_KEY_HERE
 ```
 
-If the header is missing or invalid, the response will be:
+Requests without a valid key will be rejected with:
 
 ```json
 {
@@ -32,88 +37,151 @@ If the header is missing or invalid, the response will be:
 }
 ```
 
----
+API keys are managed securely and issued on request.  
+For commercial use, bulk processing, or enterprise-tier usage, contact:
 
-## Endpoint: Download YouTube MP3
-
-### **GET** `/ytconvert`
-
-### Required Query Parameters
-
-| Name         | Type   | Required | Description |
-|--------------|--------|----------|-------------|
-| `youtubelink` | string | Yes      | A valid YouTube link (supports both long and short URLs). |
-
-Example accepted formats:
-```
-https://www.youtube.com/watch?v=VIDEO_ID
-https://youtu.be/VIDEO_ID
-```
+📧 **request@softprim.ro**
 
 ---
 
-## Response Format
+# Endpoints
 
-### Success (200)
+## 1. `/ytconvert`
+### Description
+Starts a new YouTube audio conversion job.
 
+### Method
+```
+GET /ytconvert?youtubelink=URL&format=mp3
+```
+
+### Query Parameters
+| Parameter | Required | Description |
+|----------|----------|-------------|
+| `youtubelink` | Yes | Valid YouTube link (full or short URL) |
+| `format` | No | Output format, default: `mp3` |
+
+### Example Request
+```
+GET https://vps.softprim.ro/ytconvert?youtubelink=https://youtu.be/VIDEO_ID
+```
+
+### Successful Response
 ```json
 {
   "error": false,
-  "youtube_id": "VIDEO_ID",
-  "file": "https://vps.softprim.ro/downloads/VIDEO_ID.mp3",
-  "cached": false
+  "status": "queued",
+  "job_id": "VIDEOID_mp3",
+  "check_url": "https://vps.softprim.ro/ytstatus?id=VIDEOID_mp3"
 }
 ```
 
-#### Field Descriptions
-- **error** – always `false` when the request succeeds  
-- **youtube_id** – extracted video ID  
-- **file** – direct downloadable MP3 link  
-- **cached** – `true` if the file already existed on the server, `false` if freshly processed  
+This indicates your job has been added to the queue and will be processed shortly.
 
 ---
 
-## Error Responses
+## 2. `/ytstatus`
+### Description
+Returns the current status of a conversion job.
 
-### Missing YouTube link
+### Method
+```
+GET /ytstatus?id=JOB_ID
+```
+
+### Example Responses
+
+#### Pending
+```json
+{ "status": "pending" }
+```
+
+#### Downloading
 ```json
 {
-  "error": true,
-  "message": "Missing youtubelink"
+  "status": "downloading",
+  "id": "VIDEOID"
 }
 ```
 
-### Invalid YouTube link
+#### Finished
 ```json
 {
-  "error": true,
-  "message": "Invalid YouTube URL"
+  "status": "finished",
+  "file": "https://vps.softprim.ro/download/VIDEOID.mp3"
+}
+```
+
+#### Error
+```json
+{
+  "status": "error",
+  "debug": [...]
 }
 ```
 
 ---
 
-## Caching Mechanism
+# Workflow Summary
 
-If a video was previously converted:
-- the server returns the existing MP3 immediately  
-- `cached: true` is included in the response  
-- no reprocessing occurs  
-- greatly improves performance and speed  
+### 1. You call `/ytconvert`
+- You send a YouTube link.
+- The API validates it.
+- A job file is created in the processing queue.
+- You receive a `job_id`.
+
+### 2. Worker processes the job
+- Downloads audio using `yt-dlp`.
+- Converts it into the requested format.
+- Saves output to the public download directory.
+- Writes a final status file.
+
+### 3. You call `/ytstatus`
+- Check until status = `finished`.
+- Receive the direct download URL.
 
 ---
 
-## Example Requests
+# Example Usage
 
-### Using cURL
-```bash
-curl -G "https://vps.softprim.ro/ytconvert"      --data-urlencode "youtubelink=https://youtu.be/dQw4w9WgXcQ"      -H "X-API-KEY: YOUR_API_KEY_HERE"
+### Conversion Request
+```
+GET https://vps.softprim.ro/ytconvert?youtubelink=https://youtu.be/VIDEO
 ```
 
-### Using JavaScript
+### Status Check
+```
+GET https://vps.softprim.ro/ytstatus?id=VIDEO_mp3
+```
+
+### Download File
+```
+https://vps.softprim.ro/download/VIDEO.mp3
+```
+
+---
+
+# API Key Access
+
+SoftPrim offers a stable and production‑ready conversion service with:
+- high‑speed worker processing  
+- scalable queue system  
+- enterprise-level uptime  
+- commercial SLA availability  
+
+To obtain an API key, contact:
+
+📧 **request@softprim.ro**
+
+Keys are delivered instantly after payment confirmation.
+
+---
+
+# Integration Example (JavaScript Fetch)
+
 ```javascript
-fetch("https://vps.softprim.ro/ytconvert?youtubelink=https://youtu.be/dQw4w9WgXcQ", {
-    headers: { "X-API-KEY": "YOUR_API_KEY_HERE" }
+fetch("https://vps.softprim.ro/ytconvert?youtubelink=https://youtu.be/VIDEO", {
+  headers: { "X-API-KEY": "YOUR_API_KEY" }
 })
 .then(res => res.json())
 .then(console.log);
@@ -121,33 +189,22 @@ fetch("https://vps.softprim.ro/ytconvert?youtubelink=https://youtu.be/dQw4w9WgXc
 
 ---
 
-## Getting an API Key
-
-API keys are provided **against payment**.
-
-To request one, contact:
-
-📧 **request@softprim.ro**
+# Requirements and Notes
+- You must comply with YouTube Terms of Service.
+- Do not use the API for scraping or mass copyright infringement.
+- Abuse or illegal usage may result in key suspension.
+- Processing times vary depending on video length & system load.
 
 ---
 
-## Terms & Notes
-- You must comply with YouTube’s Terms of Service.
-- Do not misuse the API for scraping or mass downloading.
-- SoftPrim is not responsible for how you use the downloaded content.
-- Abuse may lead to API key suspension.
+# Changelog
+### v1.0 – Initial Public Release
+- Conversion queue
+- Status tracking
+- Full download URL responses
+- Secure API Key authentication
+- Worker‑based asynchronous pipeline
 
 ---
 
-## Changelog
-
-### v1.0 – Initial Release
-- MP3 extraction
-- API key authentication
-- YouTube link validation
-- Caching support
-- Clean internal logging for server errors
-
----
-
-© SoftPrim – All rights reserved.
+© SoftPrim – All Rights Reserved.
